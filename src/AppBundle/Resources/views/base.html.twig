@@ -2,17 +2,58 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>{% block title %}Welcome!{% endblock %}</title>
+    <title>{% block title %}{{ raddit_app_site_name() }}{% endblock %}</title>
     {% block stylesheets %}{% endblock %}
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link rel="stylesheet" href="{{ asset('css/main.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {% if app.environment == 'dev' %}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
+      <link rel="stylesheet/less" href="{{ asset('css/main.less') }}">
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/2.7.1/less.min.js"></script>
+    {% else %}
+      <link rel="stylesheet" href="{{ asset('css/main.min.css') }}">
+    {% endif %}
+
     {% block head %}{% endblock %}
   </head>
 
   <body class="{{ block('page_classes')|replace({'\n': ''}) }}">
-    {% include '@RadditApp/nav.html.twig' %}
+    {% spaceless %}
+      <nav class="site-nav">
+        <ul>
+          {% block site_nav_left %}
+            <li><a href="{{ path('raddit_app_front') }}">{{ raddit_app_site_name() }}</a></li>
+          {% endblock %}
+        </ul>
 
-    {% block body %}{% endblock %}
-    {% block javascripts %}{% endblock %}
+        <ul class="right-nav">
+          {% block site_nav_right %}
+            {% if not is_granted('ROLE_USER') %}
+              <li><a href="{{ path('raddit_app_login') }}">{{ 'site_nav.log_in'|trans }}</a></li>
+              <li><a href="{{ path('raddit_app_registration') }}">{{ 'site_nav.register'|trans }}</a></li>
+            {% else %}
+              <li><a href="{{ logout_path() }}">{{ 'site_nav.log_out'|trans }}</a></li>
+            {% endif %}
+          {% endblock %}
+        </ul>
+      </nav>
+    {% endspaceless %}
+
+    <div class="content-wrapper">
+      <aside class="sidebar">{% block sidebar %}{% endblock %}</aside>
+      <section class="body">{% block body %}{% endblock %}</section>
+    </div>
+
+    {% block javascripts %}
+      {% if app.environment == 'dev' %}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"
+                integrity="sha256-Gn7MUQono8LUxTfRA0WZzJgTua52Udm1Ifrk5421zkA="
+                crossorigin="anonymous"></script>
+        <script src="{{ asset('js/main.js') }}"></script>
+      {% else %}
+        <script src="{{ asset('js/bundle.min.js') }}"></script>
+      {% endif %}
+    {% endblock %}
   </body>
 </html>

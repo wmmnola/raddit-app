@@ -1,14 +1,13 @@
-{% extends '@RadditApp/base.html.twig' %}
-{% from '@RadditApp/comments.html.twig' import comment %}
+{% extends '@RadditApp/forum-base.html.twig' %}
+
+{% from '@RadditApp/macros/comments.html.twig' import comment, comment_form %}
 
 {% block page_classes %}
-  {{ parent() }}
   single-comment-page
 {% endblock %}
 
 {% block body %}
-  {{ form_start(form) }}
-  {{ form_end(form) }}
-
   {{ comment(comment) }}
+
+  {{ comment_form(submission, comment) }}
 {% endblock %}

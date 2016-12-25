@@ -5,7 +5,9 @@ namespace Raddit\AppBundle\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Criteria;
+use Doctrine\Common\Collections\Selectable;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ORM\Entity()
@@ -15,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\DiscriminatorMap({"url": "Url", "post": "Post"})
  */
 abstract class Submission {
+    use VotableTrait;
+
     /**
      * @ORM\Column(type="bigint")
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -27,12 +31,15 @@ abstract class Submission {
     /**
      * @ORM\Column(type="text")
      *
+     * @Assert\NotBlank()
+     * @Assert\Length(max=300)
+     *
      * @var string
      */
     private $title;
 
     /**
-     * @ORM\OneToMany(targetEntity="Comment", mappedBy="submission")
+     * @ORM\OneToMany(targetEntity="Comment", mappedBy="submission", fetch="EXTRA_LAZY")
      *
      * @var Comment[]|Collection
      */
@@ -61,9 +68,47 @@ abstract class Submission {
      */
     private $user;
 
+    /**
+     * @ORM\OneToMany(targetEntity="SubmissionVote", mappedBy="submission", fetch="EAGER", cascade={"persist"})
+     *
+     * @var SubmissionVote[]|Collection
+     */
+    private $votes;
+
+    /**
+     * Creates a new submission with an implicit upvote from the comment author.
+     *
+     * @param Forum $forum
+     * @param User  $user
+     *
+     * @return static
+     */
+    public static function create(Forum $forum, User $user) {
+        if (static::class === self::class) {
+            throw new \BadMethodCallException(
+                'This method must be called on an implementing class'
+            );
+        }
+
+        $submission = new static();
+        $submission->setForum($forum);
+        $submission->setUser($user);
+
+        $vote = new SubmissionVote();
+        $vote->setUser($user);
+        $vote->setSubmission($submission);
+        $vote->setUpvote(true);
+
+        /** @noinspection PhpUndefinedMethodInspection */
+        $submission->getVotes()->add($vote);
+
+        return $submission;
+    }
+
     public function __construct() {
         $this->comments = new ArrayCollection();
         $this->timestamp = new \DateTime('@'.time());
+        $this->votes = new ArrayCollection();
     }
 
     /**
@@ -158,6 +203,20 @@ abstract class Submission {
      */
     public function setUser($user) {
         $this->user = $user;
+    }
+
+    /**
+     * @return SubmissionVote[]|Collection|Selectable
+     */
+    public function getVotes() {
+        return $this->votes;
+    }
+
+    /**
+     * @param SubmissionVote[]|Collection $votes
+     */
+    public function setVotes($votes) {
+        $this->votes = $votes;
     }
 
     /**

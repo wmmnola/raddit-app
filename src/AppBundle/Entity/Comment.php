@@ -4,6 +4,7 @@ namespace Raddit\AppBundle\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\Selectable;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -11,7 +12,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  * @ORM\Entity()
  * @ORM\Table(name="comments")
  */
-class Comment {
+class Comment implements BodyInterface {
+    use VotableTrait;
+
     /**
      * @ORM\Column(type="bigint")
      * @ORM\GeneratedValue(strategy="AUTO")
@@ -75,9 +78,42 @@ class Comment {
      */
     private $children;
 
+    /**
+     * @ORM\OneToMany(targetEntity="CommentVote", mappedBy="comment", fetch="EAGER", cascade={"persist"})
+     *
+     * @var CommentVote[]|Collection
+     */
+    private $votes;
+
+    /**
+     * Creates a new comment with an implicit upvote from the comment author.
+     *
+     * @param Submission   $submission
+     * @param User         $user
+     * @param Comment|null $parent
+     *
+     * @return Comment
+     */
+    public static function create(Submission $submission, User $user, Comment $parent = null) {
+        $comment = new self();
+        $comment->user = $user;
+        $comment->submission = $submission;
+        $comment->parent = $parent;
+
+        $vote = new CommentVote();
+        $vote->setUser($user);
+        $vote->setComment($comment);
+        $vote->setUpvote(true);
+
+        $comment->votes->add($vote);
+
+        return $comment;
+    }
+
     public function __construct() {
         $this->timestamp = new \DateTime('@'.time());
         $this->children = new ArrayCollection();
+        $this->votes = new ArrayCollection();
     }
 
     /**
@@ -179,16 +215,30 @@ class Comment {
     }
 
     /**
-     * @return Comment[]
+     * @return Comment[]|Collection
      */
     public function getChildren() {
         return $this->children;
     }
 
     /**
-     * @param Comment[] $children
+     * @param Comment[]|Collection $children
      */
     public function setChildren($children) {
         $this->children = $children;
+    }
+
+    /**
+     * @return Collection|CommentVote[]|Selectable
+     */
+    public function getVotes() {
+        return $this->votes;
+    }
+
+    /**
+     * @param Collection|CommentVote[] $votes
+     */
+    public function setVotes($votes) {
+        $this->votes = $votes;
     }
 }
